@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+
+.logo img{
+  height: 20px;
+  padding: 15px;
+  position: fixed;
+}
+
+.content { 
+  position: relative;
+  height: 100vh;
+  width: 100%;
+}
+
+.content .center {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.login-head{
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 2em;
+}
+
+.login-head div{
+  margin-bottom: 0px;
+}
+
+.login-explanation{
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  display: block;
+  font-size: 1.50em;
+}
+
+.login-explanation div{
+  margin-top: 0px;
+}
+
+input[type="text"], input[type="password"]{
+  padding: 15px;
+  color: #696969;
+  background-color: #EEEEEE;
+  border: none;
+  /*border-radius: 7px;*/
+  width: 600px;
+  font-weight: 400;
+  font-family: 'Poppins', sans-serif;
+}
+
+input[type="submit"]{
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  background-color: #67ADFF;
+  /*border-radius: 7px;*/
+  width: 600px;
+  color: #fff;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+}
