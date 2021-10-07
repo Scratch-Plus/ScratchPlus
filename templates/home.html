@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport"  content="width=device-width">
+    <title>Scratch+ Home</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <script>history.replaceState("", "", "/")</script>
+    {% include 'navbar.html' %}
+    <!--<div class="loader"></div>-->
+    <div style="display: flex; ma4rgin-left: 0;">
+      <div class="section" style="flex: 1; margin-left: 0;">
+        <h2>What's happening</h2>
+        <ul id="WH" style="list-style-type: none;">
+          {% if wh == [] %}
+            This is where you will see updates on scratchers you follow.
+          {% elif wh == {"code": "Unauthorized", "message": ""} %}
+            {% if api["username"] == "None" %}
+              Log in to see updates on people you follow!
+            {% else %}
+              There was an error getting your information.
+              <br>
+              Using scratchplus.am4.uk? Try <a href="https://scratchplus.scratchplus.repl.co">this</a>.
+            {% endif %}
+          {% else %}
+            {% for event in wh[:5] %}
+              <li>
+                <img src="https://cdn2.scratch.mit.edu/get_image/user/{{event['actor_id']}}_90x90.png" height="40px" width="40px" style="vertical-align: text-top; float: left; margin-right: 5px; display: block;">
+                {% if event["type"] == "followuser" %}
+                  <a href="/users/{{event['actor_username']}}">{{event["actor_username"]}}</a> followed
+                  {% if event["followed_username"] == username %}
+                    you
+                  {% else %}
+                    <a href="/users/{{event['followed_username']}}">{{event["followed_username"]}}</a>
+                  {% endif %}
+                {% elif event["type"] == "loveproject" %}
+                  <a href="/users/{{event['actor_username']}}">{{event["actor_username"]}}</a> loved <a href="/projects/{{event['project_id']}}">{{event["title"]}}</a>
+                {% elif event["type"] == "favoriteproject" %}
+                  <a href="/users/{{event['actor_username']}}">{{event["actor_username"]}}</a> favorited <a href="/projects/{{event['id']}}">{{event["project_title"]}}</a>
+                {% elif event["type"] == "becomecurator" %}
+                  <a href="/users/{{event['actor_username']}}">{{event["actor_username"]}}</a> became a curator of the studio <a href="/studios/{{event['gallery_id']}}">{{event["title"]}}</a>
+                {% elif event["type"] == "remixproject" %}
+                  <a href="/users/{{event['actor_username']}}">{{event["actor_username"]}}</a> remixed <a href="/projects/{{event['parent_id']}}">{{event["parent_title"]}}</a> as <a href="/projects/{{event['id']}}">{{event["title"]}}</a>
+                {% elif event["type"] == "followstudio" %}
+                  <a href="/users/{{event['actor_username']}}">{{event["actor_username"]}}</a> followed the studio <a href="/studios/{{event['gallery_id']}}">{{event["title"]}}</a>
+                {% elif event["type"] == "shareproject" %}
+                  <a href="/users/{{event['actor_username']}}">{{event["actor_username"]}}</a> shared the project <a href="/projects/{{event['project_id']}}">{{event["title"]}}</a>
+                {% elif event["type"] == "becomeownerstudio" %}
+                  <a href="/users/{{event['actor_username']}}">{{event["actor_username"]}}</a> made the studio <a href="/studios/{{event['gallery_id']}}">{{event["gallery_title"]}}</a>
+                {% else %}
+                  Event type unknown. JSON: {{event}}
+                {% endif %}
+                <br>
+                <small>{{event["datetime_created"]}}</small>
+              </li>
+              <br>
+            {% endfor %}
+          {% endif %}
+        </ul>
+      </div>
+      <div class="section" style="flex: 1; margin-right: 0;">
+        <h2>News</h2>
+        <ul style="list-style-type: none;">
+          {% for event in news[:4] %}
+            <li>
+              <!--<img src="{{event['image']}}" width="40px" style="vertical-align: middle;">--> <a href="{{event['url']}}">{{event["headline"]}}</a>
+              <ul style="list-style-type: none;">
+                <li>
+                  {{event["copy"]}}
+                </li>
+              </ul>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% with name = "Featured projects", items = featured["community_featured_projects"], type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with name = "Featured on Turbowarp", items = tfeatured, type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with name = "Featured Studios", items = featured["community_featured_studios"], type = "studio" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% set curator =  featured["curator_top_projects"][0]["curator_name"] %}
+    {% with name = "Projects curated by " + curator, items = featured["curator_top_projects"], type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% set studio = featured["scratch_design_studio"][0]["gallery_title"] %}
+    {% with name = "Design studio- " + studio, items = featured["scratch_design_studio"], type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with name = "Projects loved by scratchers you're following", items = loved, type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with name = "What the community is remixing", items = featured["community_most_remixed_projects"], type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with name = "What the community is loving", items = featured["community_most_loved_projects"], type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with name = "New projects", items = featured["community_newest_projects"], type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+  </body>
+</html>

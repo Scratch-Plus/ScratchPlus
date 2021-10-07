@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Scratch+ Explore</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <h2 id="Title"></h2>
+    <div class="section">
+      {% for row in range(4) %}
+        <div style="display: flex">
+          {% for item in data[row * 5: row * 5 + 5] %}
+            <div>
+              {% if "author" in item %}
+                <a href="/projects/{{item['id']}}">
+                  <img src="{{item['image']}}" style="flex: 1" width="200px" height="170px" onerror="this.src = 'https://cdn2.scratch.mit.edu/get_image/project/510186917_480x360.png'">
+                  <br>
+                  {{item["title"]}}
+                </a>
+                <br>
+                <a href="/users/{{item['author']['username']}}">{{item["author"]["username"]}}</a>
+              {% else %}
+                <a href="/studios/{{item['id']}}">
+                  <img src="{{item['image']}}" style="flex: 1" width="100%"" onerror="this.src = 'https://cdn2.scratch.mit.edu/get_image/project/510186917_480x360.png'">
+                  <br>
+                  {{item["title"]}}
+                </a>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <button style="margin: auto" onclick="next()">Next page</button>
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+    <script>
+      var title = document.getElementById("Title");
+      var url = window.location.search;
+      var params = new URLSearchParams(url);
+      var mode = String(params.get("mode")).toLowerCase();
+      if (!(["trending", "popular", "recent"].includes(mode))) {
+        mode = "Trending";
+      } else if(mode == "popular"){
+        mode = "Popular"
+      } else{
+        mode = "Recent"
+      }
+      var type = String(params.get("type")).toLowerCase();
+      if (!(["projects", "studios"].includes(type))) {
+        type = "Projects";
+      } else{
+        type = "Studios"
+      }
+      title.innerHTML = `${mode} ${type}`;
+      function next() {
+        url = window.location.search;
+        params = new URLSearchParams(url);
+        var page = params.get("page");
+        if (page == null) {
+          page = 0;
+        } else {
+          page = Number(page);
+        }
+        url = new URL(window.location);
+        url.searchParams.set("page", String(page + 1));
+        window.location.href = url;
+      }
+    </script>
+  </body>
+</html>

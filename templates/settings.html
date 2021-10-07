@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Scratch+ Settings</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+    <script>
+    </script>
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <br>
+    <button onclick="save()">Save</button><span class="save_result"></span>
+    <br>
+    <label for="Cookies">Reset settings when logged out?</label>
+    <select name="Cookies" id="2">
+      <option id="20" name="No" value="No">No</option>
+      <option id="21" name="Yes" value="Yes">Yes</option>
+    </select>
+    <br>
+    <label for="Project">Choose project display:</label>
+    <select name="Project" id="0">
+      <option id="00" name="Scratch" value="Scratch">Scratch</option>
+      <option id="01" name="Turbowarp" value="Turbowarp">Turbowarp</option>
+      <option id="02" name="Forkphorus" value="Forkphorus">Forkphorus</option>
+    </select>
+    <br>
+    <label for="Editor">Choose an editor:</label>
+    <select name="Editor" id="1">
+      <option id="10" name="Scratch" value="Scratch">Scratch</option>
+      <option id="11" name="Turbowarp" value="Turbowarp">Turbowarp</option>
+    </select>
+    <br>
+    <label for="Dark">Dark mode</label>
+    <select name="Dark" id="3">
+      <option id="30" name="Off" value="Off">Off</option>
+      <option id="31" name="On" value="On">On</option>
+    </select>
+    <br>
+    <label for="Scratchblocks">Scratchblock version</label>
+    <select name="Scratchblocks" id="4">
+      <option id="40" name="Off" value="Off">3</option>
+      <option id="41" name="On" value="On">2</option>
+    </select>
+    <script>
+      {% set data = data|string %}
+      {% for i in range(data|length) %}
+        document.getElementById("{{i}}").value = document.getElementById("{{i|string + data[i]}}").value;
+      {% endfor %}
+      function save() {
+        var data = ""
+        for (let i = 0; i < 5; i++) {
+          let name = document.getElementById(i.toString()).value;
+          elements = document.getElementsByName(name);
+          len = elements.length;
+          for (let e = 0; e < len; e++) {
+            if (elements[e].id[0] == i) {
+              data += elements[e].id[1];
+              break;
+            }
+          }
+        }
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/update_settings", true);
+        xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+        xhr.send(data);
+        document.getElementsByClassName("save_result")[0].innerHTML = "Saved!";
+        setTimeout(function () {
+          document.getElementsByClassName("save_result")[0].innerHTML = "";
+        }, 2000);
+        
+      }
+    </script>
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+  </body>
+</html>
