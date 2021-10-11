@@ -18,3 +18,4 @@ A redesign of https://scratch.mit.edu
 * Project editor in site
 * Forum posting
 * Profile comments
+* Scratchblock testing & svg download
