@@ -10,12 +10,13 @@ A redesign of https://scratch.mit.edu
 * Choose 3.0 or 2.0 forum scratchblocks
 * Search the forums along with projects and studios
 * Forum statistics
+* Scratchblock testing page
 
 # What's coming
 * Magnifier
-* Wiki
 * Commenting
 * Project editor in site
 * Forum posting
 * Profile comments
-* Scratchblock testing & svg download
+* Scratchblock svg download
+* New name (Scratch Team wants us to change it)
