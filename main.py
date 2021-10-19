@@ -1,14 +1,20 @@
-from flask import Flask, render_template, request, make_response, redirect
+from flask import Flask, render_template, request, make_response, redirect, Response
 from Scratch import Session, get_time
-import os, logging, re, json, functools
-from replit import db
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
+import os, logging, re, json, functools, math, requests
+logging.getLogger('werkzeug').disabled = True
+from API import *
+
+golinks = {
+  "post" : "https://scratch.mit.edu/discuss/topic/550473/?page=1#post-5697737"
+}
 
 app = Flask("app")
 os.system("clear")
 
 app.jinja_env.trim_blocks = True
 app.jinja_env.lstrip_blocks = True
+app.url_map.strict_slashes = False
+app.secret_key = os.environ["key"]
 
 def login(next = "/"):
   def decorator(func):
@@ -20,10 +26,10 @@ def login(next = "/"):
         else:
           return render_template("login.html", message="Login to your Scratch accout to get started!", next = next)
       elif request.method == "POST":
-        session = Session()
-        session.login(request.form["username"], request.form["password"])
+        s = Session()
+        s.login(request.form["username"], request.form["password"])
         if next == "/":
-          return func(session, *args, **kwargs)
+          return func(s, *args, **kwargs)
         else:
           return func(*args, **kwargs)
     return decorated_function
@@ -32,77 +38,90 @@ def login(next = "/"):
 def loading():
   return render_template("loading.html")
 
-@app.route("/login", strict_slashes=False)
+@app.route('/arc-sw.js')
+def arc_sw():
+  resp = open("arc-sw.txt", "r").read()
+
+  return Response(resp, mimetype="text/javascript")
+
+@app.route('/go/', defaults={"where":None})
+@app.route('/go/<where>')
+def goLink(where):
+
+  if not where:
+    where = request.args.get("where")
+  if not where:
+    return redirect('/')
+
+  if golinks[where]:
+    return redirect(golinks[where])
+  else:
+    return redirect('/')
+
+@app.route("/login")
 def login_page():
   return render_template("login.html")
 
 @app.route("/loggedin", methods = ["POST"])
 @login()
-def loggedin(session):
+def loggedin(s):
   try:
     resp = redirect("/")
-    resp.set_cookie("username", session.username, 60 * 60 * 24 * 30)
-    resp.set_cookie("csrf_token", session.csrf_token, 60 * 60 * 24 * 30)
-    resp.set_cookie("token", session.token, 60 * 60 * 24 * 30)
-    resp.set_cookie("session_id", session.session_id, 60 * 60 * 24 * 30)
+    resp.set_cookie("username", s.username)
+    resp.set_cookie("csrf_token", s.csrf_token)
+    resp.set_cookie("token", s.token)
+    resp.set_cookie("session_id", s.session_id)
     return resp
   except:
     return render_template("login.html", message = "Incorrect username or password")
 
-@app.route("/", strict_slashes=False)
+@app.route("/")
 def main():
-  session = Session()
-  session.set(request.cookies)
-  news = session.news()
-  api = session.api(session.username)
-  featured = session.featured()
-  tfeatured = session.turbowarp_featured()
-  wh = session.wh()
-  loved = session.following_loved()
+  s = Session()
+  s.set(request.cookies)
+  news = s.news()
+  api = s.api(s.username)
+  featured = s.featured()
+  tfeatured = s.turbowarp_featured()
+  wh = s.wh()
+  loved = s.following_loved()
   resp = render_template("home.html", api = api, news = news, featured = featured, tfeatured = tfeatured, wh = wh, loved = loved)
   if request.cookies.get("settings") == None:
     resp = make_response(resp)
-    resp.set_cookie("settings", "00000")
+    resp.set_cookie("settings", "000000")
   return resp
 
-@app.route("/messages", methods = ["GET", "POST"], strict_slashes=False)
+@app.route("/messages", methods = ["GET", "POST"])
 @login("/messages")
 def messages():
-  session = Session()
-  session.set(request.cookies)
-  new = session.new_messages()
-  api = session.api(session.username)
-  messages = session.messages(20, int(0) * 20)
-  return render_template("messages.html", api = api, messages = messages, new = new, page = int(0), username = session.username)
+  s = Session()
+  s.set(request.cookies)
+  new = s.new_messages()
+  api = s.api(s.username)
+  messages = s.messages(20, int(0) * 20)
+  return render_template("messages.html", api = api, messages = messages, new = new, page = int(0), username = s.username)
 
-@app.route("/unshared", strict_slashes=False)
+@app.route("/unshared")
 def stuff():
-  session = Session()
-  session.set(request.cookies)
-  return session.unshared()
+  s = Session()
+  s.set(request.cookies)
+  return s.unshared()
 
-@app.route("/session", strict_slashes=False)
-def session():
-  session = Session()
-  session.set(request.cookies)
-  return session.session()
-
-@app.route("/users/<user>", strict_slashes=False)
-def profile(user):
-  session = Session()
-  session.set(request.cookies)
-  try:
-    user_api = session.api(user)
-  except:
-    return render_template("404.html")
-  api = session.api(session.username)
-  user_featured = session.user_featured(user)
-  ocular = session.ocular(user)
-  shared = session.projects(user)
-  favs = session.favorites(user)
-  curating = session.curating(user)
-  online = user_api["username"] in db["online"]
-  return render_template("profile.html", api = api, user_api = user_api, user_featured = user_featured, ocular = ocular, shared = shared, favorites = favs, curating = curating, online = online)
+@app.route("/users/<username>")
+def profile(username):
+  user = User(username)
+  user_api = user.api
+  if not "username" in user_api:
+    return render_template("404.html"), 404
+  user_featured = user.featured()
+  ocular = user.ocular()
+  shared = user.projects()
+  favs = user.favorites()
+  curating = user.curating()
+  followers = user.followers()
+  following = user.following()
+  comments = user.comments()
+  return render_template("profile.html", user_api = user_api, user_featured = user_featured, ocular = ocular, shared = shared, favorites = favs, curating = curating, comments = comments, followers = followers, following = following)
 
 @app.route("/users/forum", methods = ["POST"])
 def forum_profile():
@@ -111,53 +130,75 @@ def forum_profile():
 
 @app.route("/users/<user>/forum")
 def user_forum(user):
-  session = Session()
-  session.set(request.cookies)
-  api = session.api(session.username)
-  ocular = session.ocular(user)
-  forum = session.forum_user(user)
-  posts = session.forum_user_posts(user)
-  post_history = session.forum_post_history(user)
-  return render_template("forum_profile.html", api = api, ocular = ocular, forum = forum, posts = posts, post_history = post_history)
+  user = User(user)
+  ocular = user.ocular()
+  forum = user.forum()
+  posts = user.posts()
+  post_history = user.forum_post_history()
+  sig_history = user.forum_signiture_history()
+  return render_template("forum_profile.html", ocular = ocular, forum = forum, posts = posts, post_history = post_history, sig_history = sig_history)
+
+@app.route("/users/<user>/api")
+def user_api(user):
+  data = User(user).api
+  data.update({"messages": User(user).messages()})
+  return data
+
+@app.route("/users/<user>/live")
+def live(user):
+  return render_template("live.html", user = user)
+
+@app.route("/users/<user>/count")
+def user_count(user):
+  o = 1000000
+  i = 0
+  r = []
+  while True:
+    last_o = o
+    if r == []:
+      if 10 ** (math.floor(math.log(o, 10)) - i) == o:
+        o -= 10 ** (math.floor(math.log(o, 10)) - (i + 1))
+      else:
+        o -= 10 ** (math.floor(math.log(o, 10)) - i)
+    else:
+      o += 10 ** (math.floor(math.log(o, 10)) - i)
+      i += 1
+    o = round(o)
+    r = requests.get(f"https://api.scratch.mit.edu/users/{user}/followers?limit=1&offset={o}").json()
+    if o == last_o:
+      break
+  return str(o)
 
 @app.route("/reset")
 def reset():
   referrer = request.referrer
-  if "https://scratchplus.am4.uk/" in str(referrer) or "https://why-is-this-blocked.scratchplus.repl.co/" in str(referrer):
-    user = request.cookies.get("username")
-    if user in db["online"]:
-      if db["online"][user] == 0:
-        del db["online"][user]
-      else:
-        db["online"][user] = db["online"][user] - 1
+  if "https://scratchplus.am4.uk/" in str(referrer) or "https://scratchplus.scratchplus.repl.co/" in str(referrer):
     resp = redirect("/login")
     resp = make_response(resp)
-    resp.set_cookie("username", expires=0)
-    resp.set_cookie("csrf_token", expires=0)
-    resp.set_cookie("token", expires=0)
-    resp.set_cookie("session_id", expires=0)
-    if request.cookies.get("settings")[2] == "1":
-      resp.set_cookie("settings", expires=0)
+    resp.set_cookie("username", "", 0)
+    resp.set_cookie("csrf_token", "", 0)
+    resp.set_cookie("token", "", 0)
+    resp.set_cookie("session_id", "", 0)
+    if request.cookies.get("settings") == "1":
+      resp.set_cookie("settings", "", 0)
     return resp
   else:
     return "To logout of your Scratch+ Account, please use the logout button on the website."
 
-@app.route("/projects/<id>", strict_slashes=False)
+@app.route("/projects/<id>")
 def project(id):
-  session = Session()
-  session.set(request.cookies)
-  try:
-    project_api = session.project(id)
-  except Exception:
-    return render_template("404.html")
-  api = session.api(session.username)
-  loved = session.loved(id, session.username)
-  faved = session.faved(id, session.username)
-  remixes = session.project_remixes(id)
-  studios = session.project_studios(id)
-  comments = session.project_comments(id)
+  s = Session()
+  s.set(request.cookies)
+  project = Project(id)
+  project_api = project.api
+  loved = s.loved(id, s.username)
+  faved = s.faved(id, s.username)
+  remixes = project.remixes()
+  studios = project.studios()
+  comments = project.comments()
+  db = project.db
   settings = request.cookies.get("settings")
-  return render_template("project.html", api = api, id = id, project_api = project_api, settings = settings, loved = loved, faved = faved, remixes = remixes, studios = studios, comments = comments)
+  return render_template("project.html", id = id, project_api = project_api, settings = settings, loved = loved, faved = faved, remixes = remixes, studios = studios, comments = comments, db = db)
 
 @app.errorhandler(404)
 def not_found(e):
@@ -167,18 +208,18 @@ def not_found(e):
 def internal_error(e):
   return render_template("500.html"), 500
 
-@app.route("/search", methods=["POST", "GET"], strict_slashes=False)
+@app.route("/search", methods=["POST", "GET"])
 def search():
   if request.method == "POST":
     q = request.form["q"]
     return redirect(f"/search?q={q}")
   else:
     q = request.args.get("q")
-    session = Session()
-    session.set(request.cookies)
-    user, projects, studios, forum = session.search(q)
-    api = session.api(session.username)
-    return render_template("search.html", user = user, projects = projects, studios = studios, forum = forum, api = api)
+    user = User(q).api
+    projects = Project().search(q)
+    studios = Studio().search(q)
+    forum = Forum().search(q)
+    return render_template("search.html", user = user, projects = projects, studios = studios, posts = forum)
 
 @app.template_filter("autolink")
 def autolink(text):
@@ -205,52 +246,44 @@ def autolink(text):
     text = text[:index] + "/static/" + text[index + 1:]
   return text
 
-@app.route("/secret", strict_slashes=False)
+@app.route("/secret")
 @login("/secret")
 def ssecret():
-  session = Session()
-  session.set(request.cookies)
-  return session.ascii(session.username)
+  return Session().ascii(request.cookies.get("username"))
 
-@app.route("/secret/<user>", strict_slashes=False)
+@app.route("/secret/<user>")
 def secret(user):
-  session = Session()
-  return session.ascii(user)
+  return Session().ascii(user)
 
 @app.route("/update_Bio", methods = ["POST"])
 def update_Bio():
-  session = Session()
-  session.set(request.cookies)
+  s = Session()
+  s.set(request.cookies)
   Bio = str(request.data.decode("utf-8", "replace")).strip()
-  session.set_bio(Bio)
+  s.set_bio(Bio)
   return ""
 
 @app.route("/update_Status", methods = ["POST"])
 def update_Status():
-  session = Session()
-  session.set(request.cookies)
+  s = Session()
+  s.set(request.cookies)
   Status = str(request.data.decode("utf-8", "replace")).strip()
-  session.set_status(Status)
+  s.set_status(Status)
   return ""
 
 @app.route("/clear", methods = ["POST"])
 def clear():
-  session = Session()
-  session.set(request.cookies)
-  session.clear()
+  s = Session()
+  s.set(request.cookies)
+  s.clear()
   return ""
 
-@app.route("/settings", methods = ["GET", "POST"], strict_slashes=False)
+@app.route("/settings", methods = ["GET", "POST"])
 def settings():
-  session = Session()
-  session.set(request.cookies)
-  api = session.api(session.username)
-  return render_template("settings.html", data = request.cookies.get("settings"), api = api)
+  return render_template("settings.html", data = request.cookies.get("settings"))
 
 @app.route("/update_settings", methods = ["POST"])
 def update_Settings():
-  session = Session()
-  session.set(request.cookies)
   Settings = str(request.data.decode("utf-8", "replace")).strip()
   resp = make_response("")
   resp.set_cookie("settings", Settings)
@@ -259,19 +292,19 @@ def update_Settings():
 @app.route("/love", methods = ["POST"])
 @login("/")
 def love():
-  session = Session()
-  session.set(request.cookies)
+  s = Session()
+  s.set(request.cookies)
   data = json.loads(str(request.data.decode("utf-8", "replace")).strip())
-  session.love(**data)
+  s.love(**data)
   return ""
 
 @app.route("/favorite", methods = ["POST"])
 @login("/")
 def favorite():
-  session = Session()
-  session.set(request.cookies)
+  s = Session()
+  s.set(request.cookies)
   data = json.loads(str(request.data.decode("utf-8", "replace")).strip())
-  session.favorite(**data)
+  s.favorite(**data)
   return ""
 
 @app.template_filter("print")
@@ -285,15 +318,13 @@ def ftype(text):
 
 @app.route("/studios/<id>")
 def studio(id):
-  session = Session()
-  session.set(request.cookies)
-  api = session.api(session.username)
-  studio_api = session.studio_api(id)
-  studio_projects = session.studio_projects(id)
-  studio_comments = session.studio_comments(id)
-  studio_members = session.studio_members(id)
-  studio_activity = session.studio_activity(id)
-  return render_template("studio.html", api = api, studio_api = studio_api, studio_projects = studio_projects, studio_comments = studio_comments, members = studio_members, activity = studio_activity)
+  studio = Studio(id)
+  api = studio.api
+  projects = studio.projects()
+  comments = studio.comments()
+  members = {"managers": studio.managers(), "curators": studio.curators()}
+  activity = studio.activity()
+  return render_template("studio.html", studio_api = api, studio_projects = projects, studio_comments = comments, members = members, activity = activity)
 
 @app.template_filter("time")
 def time(TZ):
@@ -304,18 +335,13 @@ def time(TZ):
 
 @app.route("/discuss")
 def forum():
-  session = Session()
-  session.set(request.cookies)
-  api = session.api(session.username)
-  leaderboard = session.forum_leaderboard()
-  return render_template("forum.html", api = api, leaderboard = leaderboard)
+  leaderboard = Forum().leaderboard()
+  return render_template("forum.html", leaderboard = leaderboard)
 
-@app.route("/discuss/topic/<topic_id>")
-def forum_topic(topic_id):
+@app.route("/discuss/topic/<id>")
+def forum_topic(id):
   if request.args.get("loaded") != "true":
     return loading()
-  session = Session()
-  session.set(request.cookies)
   page = request.args.get("page")
   order = request.args.get("order")
   try:
@@ -324,21 +350,34 @@ def forum_topic(topic_id):
     page = 0
   if not order == ["newest", "oldest"]:
     order = "oldest"
-  api = session.api(session.username)
-  posts = session.topic_posts(topic_id, page, order)
-  topic = session.topic_info(topic_id)
-  return render_template("forum_posts.html", api = api, posts = posts, page = page, topic = topic)
+  reactions = request.cookies.get("settings")[5]
+  posts = Forum().topic_posts(id, page, "oldest", reactions == "1")
+  topic = Forum().topic(id)
+  return render_template("forum_posts.html", posts = posts, page = page, topic = topic)
+
+@app.route("/discuss/post/<id>")
+def forum_post(id):
+  if request.args.get("loaded") != "true":
+    return loading()
+  post_info = Forum().post(id)
+  topic_id = post_info["topic"]["id"]
+  topic = Forum().topic(topic_id)
+  pages = math.ceil(topic["post_count"] / 50)
+  for page in range(pages):
+    posts = Forum().topic_posts(topic_id, page)
+    for post in posts:
+      if post["id"] == post_info["id"]:
+        return redirect(f"/discuss/topic/{topic_id}?page={page}#{id}")
+  return ""
 
 @app.route("/discuss/<id>")
 def forum_category(id):
-  session = Session()
-  session.set(request.cookies)
-  api = session.api(session.username)
-  categories = {5: "Announcements", 6: "New Scratchers", 7: "?Help With Scripts", 8: "Show and Tell", 9: "Project Ideas", 10: "Collaboration", 11: "Requests", 4: "?Questions about Scratch", 1: "Suggestions", 3: "Bugs and Glitches", 31: "Advanced Topics", 32: "Connecting to the Physical World", 48: "Developing Scratch Extensions", 49: "Open Source Projects", 29: "Things I'm Making and Creating", 30: "Things I'm Reading and Playing"}
-  category = categories[int(id)], id
-  topics = session.category_topics(category[0])
-  leaderboard = session.topic_leaderboard(category[0])
-  return render_template("forum_category.html", api = api, category = category, topics = topics, leaderboard = leaderboard)
+  if request.args.get("loaded") != "true":
+    return loading()
+  category = Forum().categories[int(id)]
+  topics = Forum().topics(id)
+  leaderboard = Forum().leaderboard(id)
+  return render_template("forum_category.html", category = category, topics = topics, leaderboard = leaderboard)
 
 @app.template_filter("split")
 def split(text, substring):
@@ -346,8 +385,6 @@ def split(text, substring):
 
 @app.route("/explore")
 def explore():
-  session = Session()
-  session.set(request.cookies)
   type = str(request.args.get("type")).lower()
   if not type in ["projects", "studios"]:
     type = "projects"
@@ -357,38 +394,21 @@ def explore():
   mode = str(request.args.get("mode")).lower()
   if mode not in ["trending", "popular", "recent"]:
     mode = "trending"
-  api = session.api(session.username)
-  data = session.explore(type, page, mode)
-  return render_template("explore.html", api = api, data = data)
+  data = Scratch().explore(type, page, mode)
+  return render_template("explore.html", data = data)
 
 @app.route("/open", methods = ["GET","POST"])
-def open():
-  if request.method == "POST":
-    user = request.cookies.get("username")
-    if user in db["online"]:
-      db["online"][user] = db["online"][user] + 1
-    else:
-      db["online"].update({user: 1})
-    return ""
-  else:
-    return str(dict(db["online"]))
-
-@app.route("/close", methods = ["POST"])
-def close():
-  user = request.cookies.get("username")
-  if user in db["online"]:
-    if db["online"][user] == 0:
-      del db["online"][user]
-    else:
-      db["online"][user] = db["online"][user] - 1
-  return ""
-
-@app.route("/clrdb")
-def clrdb():
-  db["online"] = {}
 
 @app.template_filter("append")
 def append(text, new):
   return text.append(new)
+
+@app.route("/scratchblocks")
+def scratchblocks():
+  return render_template("scratchblocks.html")
+
+@app.route("/hmm")
+def api():
+  return ""
 
 app.run(host='0.0.0.0', port=8080)
