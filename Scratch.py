@@ -103,11 +103,15 @@ class Session:
     self.token = cookies.get("token")
     self.csrf_token = cookies.get("csrf_token")
     self.id = requests.get(f"https://api.scratch.mit.edu/users/{self.username}").json()["id"]
-  def new_messages(self):
+    if self.username != None:
+      self.username = self.api(self.username)["username"]
+  def new_messages(self, user = None):
+    if user == None:
+      user = self.username
     headers = {"User-Agent": "Chrome"}
-    return requests.get(f"https://api.scratch.mit.edu/users/{self.username}/messages/count", headers = headers).json()["count"]
+    return requests.get(f"https://api.scratch.mit.edu/users/{user}/messages/count", headers = headers).json()["count"]
   def messages(self, limit = 40, offset = 0):
-    headers = {"x-csrftoken": self.csrf_token,"X-Token": self.token,"x-requested-with": "XMLHttpRequest","Cookie": f"scratchcsrftoken={self.csrf_token};scratchlanguage=en;scratchsessionsid={self.session_id};","referer": "https://scratch.mit.edu",}
+    headers = {"x-csrftoken": self.csrf_token,"X-Token": self.token,"x-requested-with": "XMLHttpRequest","Cookie": f"scratchcsrftoken={self.csrf_token};scratchlanguage=en;scratchsessionsid={self.session_id};","referer": "https://scratch.mit.edu"}
     messages = []
     o = 0
     while True:
@@ -177,6 +181,7 @@ class Session:
   def api(self, user):
     data = requests.get(f"https://api.scratch.mit.edu/users/{user}").json()
     data["history"]["joined"] = get_time(data["history"]["joined"])
+    data.update({"messages": self.new_messages(user)})
     return data
   def news(self):
     data = requests.get("https://api.scratch.mit.edu/news").json()
@@ -196,7 +201,7 @@ class Session:
     user = requests.get(f"https://api.scratch.mit.edu/users/{q}").json()
     projects = requests.get(f"https://api.scratch.mit.edu/search/projects/?mode=trending&q={q}").json()
     studios = requests.get(f"https://api.scratch.mit.edu/search/studios/?mode=trending&q={q}").json()
-    forum = requests.get(f"https://scratchdb.lefty.one/v3/forum/search?q={q}&o=newest&page=0").json()["posts"]
+    forum = requests.get(f"https://scratchdb.lefty.one/v3/forum/search?q={q}&o=relevant&page=0").json()["posts"]
     return user, projects, studios, forum
   def project_comment(self, id, message):
     headers = {"x-csrftoken": self.csrf_token,"X-Token": self.token,"x-requested-with": "XMLHttpRequest","Cookie": f"scratchcsrftoken={self.csrf_token};scratchlanguage=en;scratchsessionsid={self.session_id};","referer": f"https://scratch.mit.edu/projects/{id}/","accept": "application/json","-Type": "application/json"}
@@ -249,7 +254,7 @@ class Session:
     headers = {"x-csrftoken": self.csrf_token,"X-Token": self.token,"x-requested-with": "XMLHttpRequest","Cookie": f"scratchcsrftoken={self.csrf_token};scratchlanguage=en;scratchsessionsid={self.session_id};","referer": f"https://scratch.mit.edu/users/{self.username}"}
     data = {"userId": self.id, "id": self.username, "username": self.username, "status": content}
     requests.put(f"https://scratch.mit.edu/site-api/users/all/{self.username}/", headers = headers, data = data)
-  '''These exist but return empty lists...
+  '''These exist for some people...
   def following_projects(self):
     headers = {"x-csrftoken": self.csrf_token,"X-Token": self.token,"x-requested-with": "XMLHttpRequest","Cookie": f"scratchcsrftoken={self.csrf_token};scratchlanguage=en;scratchsessionsid={self.session_id};","referer": f"https://scratch.mit.edu/users/{self.username}"}
     projects = requests.get(f"https://api.scratch.mit.edu/users/{self.username}/following/users/projects", headers = headers).json()
@@ -275,13 +280,13 @@ class Session:
   def love(self, value, id):
     headers = {"User-Agent": "Chrome", "x-csrftoken": self.csrf_token,"X-Token": self.token,"x-requested-with": "XMLHttpRequest","Cookie": f"scratchcsrftoken={self.csrf_token};scratchlanguage=en;scratchsessionsid={self.session_id};","referer": f"https://scratch.mit.edu/projects/{id}/"}
     if value:
-      requests.post(f"https://api.scratch.mit.edu/proxy/projects/{id}/loves/user/{self.username}", headers = headers).text
+      requests.post(f"https://api.scratch.mit.edu/proxy/projects/{id}/loves/user/{self.username}", headers = headers)
     else:
       requests.delete(f"https://api.scratch.mit.edu/proxy/projects/{id}/loves/user/{self.username}", headers = headers)
   def favorite(self, value, id):
     headers = {"User-Agent": "Chrome", "x-csrftoken": self.csrf_token,"X-Token": self.token,"x-requested-with": "XMLHttpRequest","Cookie": f"scratchcsrftoken={self.csrf_token};scratchlanguage=en;scratchsessionsid={self.session_id};","referer": f"https://scratch.mit.edu/projects/{id}/"}
     if value:
-      requests.post(f"https://api.scratch.mit.edu/proxy/projects/{id}/favorites/user/{self.username}", headers = headers).text
+      requests.post(f"https://api.scratch.mit.edu/proxy/projects/{id}/favorites/user/{self.username}", headers = headers)
     else:
       requests.delete(f"https://api.scratch.mit.edu/proxy/projects/{id}/favorites/user/{self.username}", headers = headers)
   def loved(self, id, user):
@@ -345,11 +350,12 @@ class Session:
     return requests.get(f"https://scratchdb.lefty.one/v3/forum/category/topics/{category}/0?detail=2").json()
   def topic_leaderboard(self, category):
     return requests.get(f"https://scratchdb.lefty.one/v3/forum/category/rank/{category}/0").json()
-  def topic_posts(self, topic_id, page, order):
+  def topic_posts(self, topic_id, page = 0, order = "newest", reactions = True):
     data = requests.get(f"https://scratchdb.lefty.one/v3/forum/topic/posts/{topic_id}/{page}?o={order}").json()
     if not "error" in data:
-      for post in range(len(data)):
-        data[post].update({"ocular": self.ocular(data[post]["username"]), "reactions": self.post_reactions(data[post]["id"])})
+      if reactions:
+        for post in range(len(data)):
+          data[post].update({"ocular": self.ocular(data[post]["username"]), "reactions": self.post_reactions(data[post]["id"])})
       return data
     else:
       return []
@@ -367,3 +373,52 @@ class Session:
     return requests.get(f"https://scratchdb.lefty.one/v3/forum/user/posts/{username}").json()
   def explore(self, type, page, mode):
     return requests.get(f"https://api.scratch.mit.edu/explore/{type}?limit=20&offset={int(page) * 20}&language=en&mode={mode}").json()
+  def post_info(self, id):
+    return requests.get(f"https://scratchdb.lefty.one/v3/forum/post/info/{id}").json()
+  def studio_comment_reactions(self, id, page):
+    data = requests.get(f"https://magnifier-api.potatophant.net/api/comments/studios/{id}/{page + 1}").json()
+    reactions = []
+    for comment in data:
+      reactions.append(comment["reactions"])
+    return reactions
+  def project_comment_reactions(self, id, page):
+    data = requests.get(f"https://magnifier-api.potatophant.net/api/comments/projects/{id}/{page + 1}").json()
+    reactions = []
+    for comment in data:
+      reactions.append(comment["reactions"])
+    return reactions
+  def profile_comment_reactions(self, user, page):
+    data = requests.get(f"https://magnifier-api.potatophant.net/api/comments/users/{user}/{page + 1}").json()
+    reactions = []
+    for comment in data:
+      reactions.append(comment["reactions"])
+    return reactions
+  def forum_post(self, id, content):
+    headers = {"content-type": "multipart/form-data", "authority": "scratch.mit.edu", "user-agent": "a", "x-csrftoken": self.csrf_token,"X-Token": self.token,"x-requested-with": "XMLHttpRequest","Cookie": f"scratchcsrftoken={self.csrf_token};scratchlanguage=en;scratchsessionsid={self.session_id};","referer": f"https://scratch.mit.edu/discuss/topic/{id}"}
+    data = {
+      "csrfmiddlewaretoken": self.csrf_token,
+      "body": content
+    }
+    r = requests.post(f"https://scratch.mit.edu/discuss/topic/{id}/", data = data, headers = headers)
+    print("\n\n\n")
+    if "location" in r.headers:
+      print(r.headers["location"])
+    else:
+      for header in r.headers:
+        print(header, r.headers[header])
+  def profile_comments(self, user):
+    html = requests.get(f"https://scratch.mit.edu/site-api/comments/user/{user}").text
+    #data = json.dumps(xmltojson.parse(html))
+    return re.findall('<li class=\"top-level-reply\">.*?</li>', html)
+  def user_followers(self, user):
+    i = 0
+    r = []
+    users = []
+    while len(r) > 0 or i == 0:
+      r = requests.get(f"https://api.scratch.mit.edu/users/{user}/followers?offset={20 * i}").json()
+      users += r
+      i += 1
+    return users
+  def follow_topic(self, id):
+    headers = {"x-csrftoken": self.csrf_token,"X-Token": self.token,"x-requested-with": "XMLHttpRequest","Cookie": f"scratchcsrftoken={self.csrf_token};scratchlanguage=en;scratchsessionsid={self.session_id};","referer": f"https://scratch.mit.edu/discuss/topic/{id}",}
+    print(requests.post(f"http://scratch.mit.edu/discuss/subscription/topic/{id}/add", headers = headers).text)
