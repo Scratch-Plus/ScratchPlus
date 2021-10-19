@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Scratch+ Messages</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <script async src="https://arc.io/widget.min.js#1v8fffQ8"></script>
+    <style>
+    </style>
+  </head>
+  <body>
+    <script>
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "/clear", true);
+      xhr.send();
+    </script>
+    {% include 'navbar.html' %}
+    <br>
+    <h2>{{new}} new messages <button onclick="clear()">Mark as read</button> </h2>
+    {% for message in messages %}
+      {% if page * 20 + loop.index <= new %}
+        <div class="section" class="new" style="overflow: auto; background-color: #b1d7f0;">
+      {% else %}
+        <div class="section" style="overflow: auto;">
+      {% endif %}
+        <a href="/users/{{message['actor']}}"><img src="https://cdn2.scratch.mit.edu/get_image/user/{{message['actor_id']}}_90x90.png" height="40px" width="40px" style="vertical-align: text-top; float: left; margin-right: 5px; display: block;"></a>
+        {% if message["type"] == "addcomment" %}
+          <a href="/users/{{message['actor']}}">{{message["actor"]}}</a>
+          {% if message["comment_type"] == "profile" %}
+            {% if message["reply"] != username %}
+              commented on <a href="/users/{{api['username']}}">your profile</a>: 
+            {% else %}
+              replied on <a href="/users/{{message['title']}}">{{message["title"]}}'s profile</a>: 
+            {% endif %}
+          {% elif message["comment_type"] == "project" %}
+            {% if message["reply"] != username %}
+              commented
+            {% else %}
+              replied
+            {% endif %}
+            on <a href="/projects/{{message['id']}}">{{message["title"]}}</a>: 
+          {% elif message["comment_type"] == "studio" %}
+            {% if message["reply"] != username %}
+              commented
+            {% else %}
+              replied
+            {% endif %}
+            on the studio <a href="/studios/{{message['id']}}">{{message["title"]}}</a>: 
+          {% endif %}
+          {{message["comment"]|autolink|safe}}
+        {% elif message["type"] == "followuser" %}
+          <a href="/users/{{message['actor']}}">{{message["actor"]}}</a> followed
+          {% if message["followed"] == username %}
+            you
+          {% else %}
+            <a href="/users/{{message['followed']}}">{{message["followed"]}}</a>
+          {% endif %}
+        {% elif message["type"] == "becomecurator" %}
+          <a href="/users/{{message['actor']}}">{{message["actor"]}}</a> became a curator of the studio <a href="/studios/{{message['id']}}">{{message["title"]}}</a>
+        {% elif message["type"] == "loveproject" %}
+          <a href="/users/{{message['actor']}}">{{message["actor"]}}</a> loved <a href="/projects/{{message['id']}}">{{message["title"]}}</a>
+        {% elif message["type"] == "favoriteproject" %}
+          <a href="/users/{{message['actor']}}">{{message["actor"]}}</a> favorited <a href="/projects/{{message['id']}}">{{message["title"]}}</a>
+        {% elif message["type"] == "studioactivity" %}
+          There was activity in the studio <a href="/studios/{{message['id']}}">{{message["title"]}}</a>
+        {% elif message["type"] == "remixproject" %}
+          <a href="/users/{{message['actor']}}">{{message["actor"]}}</a> remixed <a href="/projects/{{message['parent_id']}}">{{message["parent_title"]}}</a> as <a href="/projects/{{message['id']}}">{{message["title"]}}</a>
+        {% elif message["type"] == "curatorinvite" %}
+          <a href="/users/{{message['actor']}}">{{message["actor"]}}</a> invited you to curate the studio <a href="/studios/{{message['id']}}">{{message["title"]}}</a>
+        {% elif message["type"] == "forumpost" %}
+          <a href="/users/{{message['actor']}}">{{message["actor"]}}</a> made a post in {{message["title"]}}
+        {% elif message["type"] == "becomeownerstudio" %}
+          <a href="/users/{{message['actor']}}">{{message["actor"]}}</a> made you the owner of the studio <a href="/studios/{{message['id']}}">{{message["title"]}}</a>
+        {% elif message["type"] == "userjoin" %}
+          You joined scratch!
+        {% else %}
+          Message type unknown. JSON: {{message}}
+        {% endif %}
+        <br>
+        <small>{{message["created"]}}</small>
+      </div>
+    {% endfor %}
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+  </body>
+</html>

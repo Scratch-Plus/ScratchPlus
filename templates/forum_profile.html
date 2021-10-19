@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport"  content="width=device-width">
+    <title>{{ocular["username"]}} on Scratch+ Forums</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+    <script async src="https://arc.io/widget.min.js#1v8fffQ8"></script>
+    <style>
+      .color {
+        height: 10px;
+        width: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .section img {
+        max-width: 70%;
+        max-height: 60%;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+    {% include 'navbar.html' %}
+    <h2></h2>
+    <small>{% if not "error" in ocular %} {% if ocular["color"] != None %}<span class="color" style="background-color: {{ocular['color']}};"></span>{% endif %} {{ocular["status"]}}{% endif %}</small>
+    {% if sig_history|length > 0 and sig_history[0]["previous_value"] != "None" %}
+      <div class="section">
+        Signiture {% if sig_history|length > 1 %}from <span id="date"></span>{% endif %}
+        <br>
+        <input type="range" min="1" max="{{sig_history|length}}" value="1" class="slider" id="myRange" style="{% if sig_history|length == 1 %}display: none;{% endif %}" width="100%">
+        <div id="sig" style="max-height: 250px; overflow: auto;">
+        </div>
+      </div>
+    {% endif %}
+    <div class="section">
+      <h2>{{forum["counts"]["total"]["count"]}} posts</h2>
+      <canvas id="pie" style="max-width: 75%; margin: auto;"></canvas>
+      <br>
+      <canvas id="line" style="max-width: 575%; margin: auto;"></canvas>
+    </div>
+    <div>
+      <ul style="list-style-type: none; padding-left: 0;">
+      {% set categories = {"Announcements": 5, "New Scratchers": 6, "Help with Scripts": 7, "Show and Tell": 8, "Project Ideas": 9, "Collaberation": 10, "Requests": 11, "Questions about Scratch": 4, "Suggestions": 1, "Bugs and Glitches": 3, "Advanced Topics": 31, "Connecting to the Physical World": 32, "Developing Scratch Extensions": 48, "Open Source Projects": 49, "Things I'm Making and Creating": 29, "Things I'm Reading and Playing": 30} %}
+      {% for post in posts %}
+        <li>
+          <div class="section post">
+            <a href="/discuss/{{categories[post['topic']['category']]}}">{{post["topic"]["category"]}}</a>: <a href="/discuss/post/{{post['id']}}">{{post["topic"]["title"]}}</a> {{post["time"]["posted"]|time}}
+            <hr>
+            {{post["content"]["html"]|safe}}
+            <hr>
+            {% for emoji in post["reactions"] %}
+              {% if emoji["reactions"]|length != 0 %}
+                {{emoji["emoji"]}} {{emoji["reactions"]|length}} |
+              {% endif %} 
+            {% endfor %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+    </div>
+    {% set categories = forum["counts"].keys()|list %}
+    <script>
+      user = String(window.location).split("/")[4]
+      document.title = user + " on Scratch+ Forums";
+      document.getElementsByTagName("h2")[0].innerHTML = user;
+      
+      try {
+        var None = null;
+        var sigs = {{sig_history|safe}};
+        var slider = document.getElementById("myRange");
+        var sig = document.getElementById("sig");
+        var date = document.getElementById("date");
+        slider.oninput = function() {
+          sig.innerHTML = sigs[slider.value - 1].previous_value;
+          date.innerHTML = sigs[slider.value - 1].time_found;
+        }
+        sig.innerHTML = sigs[0].previous_value;
+        date.innerHTML = sigs[0].time_found;
+      } catch {}
+
+      var xValues = {{categories|safe}}.slice(1);
+      var counts = {{forum["counts"]|tojson}};
+      var yValues = [];
+      for (var i = 0; i < xValues.length; i++) {
+        yValues.push(counts[xValues[i]].count);
+      }
+      var barColors = [
+        "#b91d47",
+        "#00aba9",
+        "#2b5797",
+        "#e8c3b9",
+        "#1e7145"
+      ];
+
+      new Chart("pie", {
+        type: "pie",
+        data: {
+          labels: xValues,
+          datasets: [{
+            backgroundColor: barColors,
+            data: yValues
+          }]
+        },
+        options: {
+          title: {
+            display: true,
+            text: "Post Distribution"
+          }
+        }
+      });
+
+      xValues = [];
+      yValues = [];
+
+      var data = {{post_history|safe}};
+
+      var sep = Math.floor(data.length / 20)
+
+      for (i = 0; i < data.length; i++) {
+        if (i % sep == 0) {
+          xValues.push(data[i].date.split("T")[0]);
+          yValues.push(data[i].value);
+        }
+      }
+
+      new Chart("line", {
+        type: "line",
+        data: {
+          labels: xValues,
+          datasets: [{
+            fill: false,
+            lineTension: 0,
+            backgroundColor: "rgba(5,0,255,1.0)",
+            borderColor: "rgba(0,0,255,0.1)",
+            borderWidth: 10,
+            pointRadius: 10,
+            pointHoverRadius: 15,
+            data: yValues,
+            label: "Posts over time"
+          }]
+        },
+        options:{
+          aspectRatio: 4,
+          scales: {
+            xAxes: [
+              {
+                gridLines:{ 
+                  color: "#6e6e6e"
+                }
+              }
+            ],
+            yAxes: [
+              {
+                gridLines: {
+                  color: "#6e6e6e"
+                }
+              }
+            ]
+          }
+        }
+      });
+    </script>
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+  </body>
+</html>

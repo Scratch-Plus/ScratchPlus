@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport"  content="width=device-width">
+    <title>Scratch+ Forum</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+    <script async src="https://arc.io/widget.min.js#1v8fffQ8"></script>
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <h2>Forum</h2>
+    <div class="tab">
+      <button id="Default" class="tablinks" onclick="openTab(event, 'Categories', 'block')">Categories</button>
+      <button class="tablinks" onclick="openTab(event, 'Leaderboard', 'block')">Leaderboard</button>
+      <form action="/users/forum" method="POST" autocomplete="off" style="display: inline-block;">
+        <input type="text" name="q" placeholder="Search user...">
+      </form>
+    </div>
+    <div id="Categories" class="tabcontent">
+      {% set categories = {"Announcements": 5, "New Scratchers": 6, "Help with Scripts": 7, "Show and Tell": 8, "Project Ideas": 9, "Collaberation": 10, "Requests": 11, "Questions about Scratch": 4, "Suggestions": 1, "Bugs and Glitches": 3, "Advanced Topics": 31, "Connecting to the Physical World": 32, "Developing Scratch Extensions": 48, "Open Source Projects": 49, "Things I'm Making and Creating": 29, "Things I'm Reading and Playing": 30} %}
+      <ul style="list-style-type: none; padding-left: 0;">
+        {% for category in categories %}
+          <li>
+            <div class="section">
+              <a href="/discuss/{{categories[category]}}">{{category}}</a>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div id="Leaderboard" class="tabcontent">
+      <ul style="list-style-type: none; padding-left: 0;">
+        {% for user in leaderboard %}
+          <li>
+            <div class="section">
+              {{loop.index}}. <a href="/users/{{user['username']}}/forum">{{user["username"]}}</a>: {{user["counts"]["total"]["count"]}}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+    <script>
+      document.getElementById("Default").click();
+    </script>
+  </body>
+</html>

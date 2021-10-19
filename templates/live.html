@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <script async src="https://arc.io/widget.min.js#1v8fffQ8"></script>
+    <title>Scratch+ Live</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="{{url_for('static', filename = 'scrollerJS/scroller.js')}}"></script>
+    <link href="{{url_for('static', filename = 'scrollerJS/scroller.css')}}" rel="stylesheet">
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <br>
+    <div id="amount">
+    </div>
+    <script>
+      var followers = Scroller.getNewInstance({});
+      followers.appendTo(document.getElementById("amount"));
+      followers.start("0");
+      function amount() {
+        let user = String(window.location).split("/")[4];
+        r = new XMLHttpRequest();
+        r.open("GET", `/users/${user}/count`, false);
+        r.send();
+        return r.response;
+      };
+      followers.scrollTo(amount())
+      setInterval(function() {
+        followers.scrollTo(amount());
+      }, 5000)
+    </script>
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+  </body>
+</html>

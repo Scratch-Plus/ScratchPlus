@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script async src="https://arc.io/widget.min.js#1v8fffQ8"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Scratch+ Project</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <style>
+      .tabcontent {
+        display: block;
+        margin: 0;
+        flex: 1;
+        height: 390px;
+        width: 100%;
+        overflow: auto;
+      }
+      .stats {
+        width: 50px;
+        vertical-align: middle;
+      }
+      .button {
+        padding: 0px;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      function love() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/love", true);
+        src = document.getElementById("love").src;
+        if (src.includes("love-gray.svg")) {
+          document.getElementById("love").src = "/static/images/love-red.svg";
+          document.getElementById("love_count").textContent = parseInt(document.getElementById("love_count").textContent) + 1;
+        } else {
+          document.getElementById("love").src = "/static/images/love-gray.svg";
+          document.getElementById("love_count").textContent = parseInt(document.getElementById("love_count").textContent) - 1;
+        }
+        data = '{"value": ' + src.includes("love-gray.svg") + ', "id": {{project_api["id"]}}}'
+        xhr.send(data);
+      }
+      function fav() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/favorite", true);
+        src = document.getElementById("fav").src;
+        if (src.includes("fav-gray.svg")) {
+          document.getElementById("fav").src = "/static/images/fav-yellow.svg";
+          document.getElementById("fav_count").textContent = parseInt(document.getElementById("fav_count").textContent) + 1;
+        } else {
+          document.getElementById("fav").src = "/static/images/fav-gray.svg";
+          document.getElementById("fav_count").textContent = parseInt(document.getElementById("fav_count").textContent) - 1;
+        }
+        xhr.send(src.includes("fav-gray.svg"));
+      }
+      function edit() {
+        {% if settings[1] == "0" %}
+          window.open("https://scratch.mit.edu/projects/" + {{project_api["id"]}} + "/editor", '_blank');
+        {% else %}
+          window.open("https://turbowarp.org/" + {{project_api["id"]}} + "/editor", '_blank');
+        {% endif %}
+      }
+    </script>
+    {% include 'navbar.html' %}
+    <br>
+    <h2>{{project_api["title"]}}</h2>
+    <div style="display: flex; margin-left: 0;">
+      <div style="flex: 1;">
+        {% if settings[0] == "0" %}
+          <iframe src="https://scratch.mit.edu/projects/{{project_api['id']}}/embed" width="600px" height="450px"></iframe>
+        {% elif settings[0] == "1" %}
+          <iframe id="turbowarp" width="640px" height="480px" allowtransparency="true" frameborder="0" scrolling="no" allowfullscreen style="margin-left: 0; display: inline-block; float: left"></iframe>
+        {% else %}
+          <iframe src="https://forkphorus.github.io/embed.html?id={{project_api['id']}}" width="600px" height="450px"></iframe>
+        {% endif %}
+        {% set stats = project_api["stats"] %}
+        <div style="display: flex; font-size: 20px">
+          <span style="flex: 1"><button onclick="love()" style="background-color: transparent; padding: 0; margin: 0;"><img id="love" class="stats" src="{{url_for('static', filename = 'images/love-gray.svg')}}"></button> <span id="love_count">{{stats["loves"]}}</span></span>
+          <span style="flex: 1"><button onclick="fav()" style="background-color: transparent; padding: 0; margin: 0;"><img id="fav" class="stats" src="{{url_for('static', filename = 'images/fav-gray.svg')}}"></button> <span id="fav_count">{{stats["favorites"]}}</span></span>
+          <span style="flex: 1"><img class="stats" src="{{url_for('static', filename = 'images/remix_type-gray.svg')}}"> {{stats["remixes"]}}</span>
+          <span style="flex: 1"><img class="stats" src="{{url_for('static', filename = 'images/views-gray.svg')}}"> {{stats["views"]}}</span>
+        </div>
+      </div>
+      <div style="flex: 1;">
+        <button id="Default" class="tablinks" onclick="openTab(event, 'Instructions', 'block')">Instructions</button>
+        <button class="tablinks" onclick="openTab(event, 'Description', 'block')">Notes</button>
+        <button class="tablinks" onclick="openTab(event, 'Credits', 'block')">Credits</button>
+        <button class="tablinks" onclick="openTab(event, 'Ranks', 'block')">Ranks</button>
+        <button class="tablinks" onclick="openTab(event, 'Metadata', 'block')">Metadata</button>
+        <button class="tablinks" onclick="edit()">See inside</button>
+        <br>
+        <div id="Instructions" class="tabcontent section">
+          <h2>Instructions</h2>
+          {{project_api["instructions"]|autolink|replace("\n", "<br>")|safe}}
+        </div>
+        <div id="Description" class="tabcontent section">
+          <h2>Notes</h2>
+          {{project_api["description"]|autolink|replace("\n", "<br>")|safe}}
+        </div>
+        <div id="Credits" class="tabcontent section">
+          <h2>Credits</h2>
+          Created on {{project_api["history"]["created"].split("T")[0]}}
+          <br>
+          Last shared on {{project_api["history"]["shared"].split("T")[0]}}
+          <br>
+          Last modified on {{project_api["history"]["modified"].split("T")[0]}}
+          {% set root = project_api["remix"]["root"] %}
+          <div>
+            By <a href="/users/{{project_api['author']['username']}}">{{project_api["author"]["username"]}}</a>
+          </div>
+          {% if root != None %}
+            {% if root|type == "<class 'list'>" %}
+              <div>
+                Thanks to <a href="/users/{{root[0]['author']['username']}}">{{root[0]["author"]["username"]}}</a> for the original project <a href="/projects/{{root[0]['id']}}">{{root[0]["title"]}}</a>.
+              </div>
+              {% set parent = project_api["remix"]["parent"] %}
+              {% if parent != root %}
+                <div>
+                  Thanks to <a href="/users/{{parent[0]['author']['username']}}">{{parent[0]["author"]["username"]}}</a> for the project <a href="/projects/{{parent[0]['id']}}">{{parent[0]["title"]}}</a>.
+                </div>
+              {% endif %}
+            {% else %}
+              <div>
+                Thanks to <a href="/users/{{root['author']['username']}}">{{root["author"]["username"]}}</a> for the original project <a href="/projects/{{root['id']}}">{{root["title"]}}</a>.
+              </div>
+              {% set parent = project_api["remix"]["parent"] %}
+              {% if parent != root %}
+                <div>
+                  Thanks to <a href="/users/{{parent['author']['username']}}">{{parent["author"]["username"]}}</a> for the project <a href="/projects/{{parent['id']}}">{{parent["title"]}}</a>.
+                </div>
+              {% endif %}
+            {% endif %}
+          {% endif %}
+        </div>
+        <div id="Ranks" class="tabcontent section">
+          <h2>Ranks</h2>
+          <ul style="list-style-type: none">
+            {% for item in db["statistics"]["ranks"] %}
+              <li>
+                {{item}}: {{db["statistics"]["ranks"][item]}}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div id="Metadata" class="tabcontent section">
+          <h2>Metadata</h2>
+          Last updated {{db["times"]["last_metadata_check"]|time}}
+          <ul style="list-style-type: none;">
+            version: {{db["metadata"]["version"]}}
+            <br>
+            costumes: {{db["metadata"]["costumes"]}}
+            <br>
+            blocks: {{db["metadata"]["blocks"]}}
+            <br>
+            variables: {{db["metadata"]["variables"]}}
+            <br>
+            assets: {{db["metadata"]["assets"]}}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% with name = "Remixes", items = remixes, type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with name = "Studios", items = studios, type = "studio" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with comments = comments %}
+      {% include "comments.html" %}
+    {% endwith %}
+    <ul id="js_comments">
+    </ul>
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+    <script>
+      document.getElementById("turbowarp").src = "https://turbowarp.org/{{project_api['id']}}/embed/?addons=pause&username=" + getCookie("username")
+      document.getElementById("Default").click();
+      if ('{{loved["userLove"]}}' == "True") {
+        document.getElementById("love").src = "/static/images/love-red.svg";
+      }
+      if ('{{faved["userFavorite"]}}' == "True") {
+        document.getElementById("fav").src = "/static/images/fav-yellow.svg";
+      }
+    </script>
+  </body>
+</html>

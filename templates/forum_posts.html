@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport"  content="width=device-width">
+    <title>Scratch+ Forum Topic</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+    <script async src="https://arc.io/widget.min.js#1v8fffQ8"></script>
+    <style>
+      .color {
+        height: 10px;
+        width: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <h2>{{posts[0]["topic"]["category"]}}: {{posts[0]["topic"]["title"]}}</h2>
+    {% set max = (topic["post_count"]/50)|round(0, "ceil")|int %}
+    {% if page != 0 %}<a href="/discuss/topic/{{posts[0]['topic']['id']}}?page={{page|int - 1}}">Last page</a> | {% endif %}Page {{page + 1}} of {{max}}{% if page != max - 1 %} | <a href="/discuss/topic/{{posts[0]['topic']['id']}}?page={{page|int + 1}}">Next page</a>{% endif %}
+    <ul style="list-style-type: none; padding-left: 0;">
+      {% for post in posts %}
+        <li>
+          <div id="{{post['id']}}" class="section post">
+            <!--<img src="https://cdn2.scratch.mit.edu/get_image/user/{{post['username']}}_90x90.png" width="30px" height="30px" style="vertical-align: middle; margin-right: 10px">-->
+            <a href="/users/{{post['username']}}/forum">{{post["username"]}}</a> {% if "ocular" in post %}{% if not "error" in post["ocular"] %}{% if post["ocular"]["color"] != None %}<span class="color" style="background-color: {{post['ocular']['color']}};"></span>{% endif %} {{post["ocular"]["status"]}}{% endif %}{% endif %}
+            <br>
+            Posted {{post["time"]["posted"]|time}}{% if (post["time"]["posted"] != post["time"]["edited"]) and (post["time"]["edited"] != None) %} | Edited {{post["time"]["edited"]|time}}{% endif %}
+            <hr>
+            {{post["content"]["html"]|safe}}
+            {% if "reactions" in post %}
+              <hr>
+              {% for emoji in post["reactions"] %}
+                {% set title = [] %}
+                {% for user in emoji["reactions"] %}
+                  {% set name = user["user"] %}
+                  {% set title = title|append("<a href='/users/" + name + "/forum'>" + name + "</a>") %}
+                {% endfor %}
+                {% set title = title|join(", ") %}
+                <span class="tooltip"><a href="https://ocular.jeffalo.net/react/{{post['id']}}?emoji={{emoji['emoji']}}"  target="_blank">{{emoji["emoji"]}} {{emoji["reactions"]|length}}</a><span class="tooltiptext">{{title|safe}}</span></span> |
+              {% endfor %}
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+    {% if page != 0 %}<a href="/discuss/topic/{{posts[0]['topic']['id']}}?page={{page|int - 1}}">Last page</a> | {% endif %}Page {{page + 1}} of {{max}}{% if page != max - 1 %} | <a href="/discuss/topic/{{posts[0]['topic']['id']}}?page={{page|int + 1}}">Next page</a>{% endif %}
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+    <script>
+      document.getElementById("Default").click();
+    </script>
+  </body>
+</html>

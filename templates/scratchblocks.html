@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script async src="https://arc.io/widget.min.js#1v8fffQ8"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Scratch+ ScratchBlocks</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+      <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+    <style>
+      .editor {
+        margin-right: 10px;
+        white-space: pre-wrap;
+      }
+      .display {
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    {{"\n"}}
+    <a id="export" download="scratchblocks.html">Export svg</a>
+    <div style="display: flex;">
+      <textarea id="editor" class="editor section" contenteditable="true" style="flex: 1;"></textarea>
+      <p id="display" class="display section" style="flex: 1"></p>
+    </div>
+    <script src="{{url_for('static', filename = 'scratchblocks/scratchblocks-min.js')}}"></script>
+    <script>
+      var a = document.getElementById("export");
+      var editor = document.getElementById("editor");
+      var display = document.getElementById("display");
+      document.getElementById("editor").addEventListener("input", function() {
+        display.innerHTML = editor.value;
+        scratchblocks.renderMatching('.display', {
+          style: 'scratch3',
+          languages: ['en'],
+          scale: 1,
+        });
+        var svg = display.children[0].innerHTML;
+        a.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+      })
+    </script>
+  </body>
+</html>

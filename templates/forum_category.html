@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script async src="https://arc.io/widget.min.js#1v8fffQ8"></script>
+    <meta charset="utf-8">
+    <meta name="viewport"  content="width=device-width">
+    <title>Scratch+ Forum Category</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <h2>{{category}}</h2>
+    <div class="tab">
+      <button id="Default" class="tablinks" onclick="openTab(event, 'Topics', 'block')">Topics</button>
+      <button class="tablinks" onclick="openTab(event, 'Leaderboard', 'block')">Leaderboard</button>
+    </div>
+    <div id="Topics" class="tabcontent">
+      <ul style="list-style-type: none; padding-left: 0;">
+        {% for topic in topics %}
+          <li>
+            <div class="section">
+              <a href="/discuss/topic/{{topic['id']}}">{{topic["title"]}}</a>{% if "first_post" in topic %} by {{topic["first_post"]["username"]}}{% endif %}
+              <br>
+                <small>Created {{topic["first_post"]["time"]["posted"]|time}} | {{topic["post_count"]}} posts | Last post by {{topic["last_post"]["username"]}} {{topic["last_post"]["time"]["posted"]|time}}</small>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div id="Leaderboard" class="tabcontent">
+      <ul style="list-style-type: none; padding-left: 0;">
+        {% for user in leaderboard %}
+          <li>
+            <div class="section">
+              {{loop.index}}. <a href="/users/{{user['username']}}/forum">{{user["username"]}}</a>: {{user["counts"][category]["count"]}}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+    <script>
+      document.getElementById("Default").click();
+    </script>
+  </body>
+</html>

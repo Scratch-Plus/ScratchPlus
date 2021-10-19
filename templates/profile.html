@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script async src="https://arc.io/widget.min.js#1v8fffQ8"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>{{user_api["username"]}} on Scratch+</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link href="{{url_for('static', filename = 'style.css')}}" rel="stylesheet" type="text/css" />
+    <style>
+      .color {
+        height: 10px;
+        width: 10px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    {% include 'navbar.html' %}
+    <br>
+    <div class="section" style="display: block">
+      <img src="https://cdn2.scratch.mit.edu/get_image/user/{{user_api['id']}}_90x90.png" height="55px" width="55px" style="vertical-align: text-top; float: left; margin-right: 5px; display: block;" >
+      <strong>{{user_api["username"]}}{%if user_api["scratchteam"]%} * {% endif %}</strong>
+      {% if not "error" in ocular %}({% if ocular["color"] != None %}<span class="color" style="background-color: {{ocular['color']}};"></span>{% endif %} {{ocular["status"]}}){% endif %}
+      <br>
+      Joined {{user_api["history"]["joined"]|time}}
+      <br>
+      {{user_api["profile"]["country"]}}
+      <br>
+      <div style="display: flex;">
+        <div style="flex: 1;">
+          {% if 1 == 2 %}
+            <h3>About me</h3>
+            <div id="Bio" height="150px" style="overflow: auto; border: 1px solid black; display: block;" contenteditable="true">
+              {{user_api["profile"]["bio"]|autolink|replace("\n", "<br>")|safe}}
+            </div>
+            <h3>What I'm working on</h3>
+            <div id="Status" height="150px" style="overflow: auto; border: 1px solid black; display: block;" contenteditable="true">
+              {{user_api["profile"]["status"]|autolink|replace("\n", "<br>")|safe}}
+            </div>
+            <script>
+              document.getElementById("Bio").addEventListener("input", function() {
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/update_Bio", true);
+                xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+                let data = document.getElementById("Bio").innerHTML;
+                xhr.send(data);
+              }, false);
+              document.getElementById("Status").addEventListener("input", function() {
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/update_Status", true);
+                xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+                let data = document.getElementById("Status").innerHTML;
+                xhr.send(data);
+              }, false);
+            </script>
+          {% else %}
+            <h3>About me</h3>
+            <div id="Bio" height="100px" width="20%" style="overflow: scroll; border: 1px solid black; display: block;">
+            {{user_api["profile"]["bio"]|autolink|replace("\n", "<br>")|safe}}
+            </div>
+            <h3>What I'm working on</h3>
+            <div id="Status" height="100px" width="20%" style="overflow: scroll; border: 1px solid black; display: block;">
+              {{user_api["profile"]["status"]|autolink|replace("\n", "<br>")|safe}}
+            </div>
+          {% endif %}
+        </div>
+        <div style="flex: 1">
+          <h2>{{user_featured["featured_project_label_name"]}}: {{user_featured["featured_project_data"]["title"]}}</h2>
+          <a href="/projects/{{user_featured['featured_project_data']['id']}}">
+            <img src={{user_featured["featured_project_data"]["thumbnail_url"]}} width="400px">
+          </a>
+        </div>
+      </div>
+    </div>
+    {% with name = "Shared projects", items = shared, type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with name = "Favorite projects", items = favorites, type = "project" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    {% with name = "Studios I curate", items = curating, type = "studio" %}
+      {% include "carousel.html" %}
+    {% endwith %}
+    <div class="section">
+      <h2>Followers</h2>
+      {% for user in followers %}
+        {{user["username"]}}
+      {% endfor %}
+    </div>
+    <div class="section">
+      <h2>Following</h2>
+      {% for user in following %}
+        {{user["username"]}}
+      {% endfor %}
+    </div>
+    {% if "minecraft" in user_api["profile"]["bio"]|lower %}
+      <embed src="{{ url_for('static', filename='Pigstep.mp3') }}" autostart=true loop=true height="0">
+    {% endif %}
+    {{comments}}
+    <script src="{{url_for('static', filename = 'script.js')}}"></script>
+  </body>
+</html>
