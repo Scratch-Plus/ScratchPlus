@@ -1,3 +1,6 @@
+# DEPRECATED
+ScratchPlus will likely make no new updates. See https://github.com/Scratch-Plus/ScratchPlus/issues/4
+
 # ScratchPlus
 A redesign of https://scratch.mit.edu
 
